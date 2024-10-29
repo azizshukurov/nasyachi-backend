@@ -1,7 +1,9 @@
 const router = require('express').Router()
 const adminRouter = require('./admin.routes')
+const clientRouter = require('./client.routes.js')
 const upload = require('../utils/upload.js')
 
+router.use('/client', clientRouter)
 router.use('/admin', adminRouter)
 
 const uploadFile = upload.single('file')

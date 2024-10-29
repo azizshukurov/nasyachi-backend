@@ -1,5 +1,6 @@
 const express = require('express')
 const cors = require('cors')
+const morgan = require('./logger/morgan')
 const router = require('./routes/index.routes')
 const connectDB = require('./config/db')
 const errorHandler = require('./middlewares/error-handler')
@@ -14,8 +15,9 @@ const app = express()
 app.use(cors())
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
+app.use(morgan())
 app.use('/api', router)
-app.use('/file', express.static(path.join(`${process.cwd()}/uploads`)))
+app.use('/api/file', express.static(path.join(`${process.cwd()}/uploads`)))
 app.use(errorHandler)
 
 const start = async () => {
