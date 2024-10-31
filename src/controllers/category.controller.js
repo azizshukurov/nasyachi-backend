@@ -1,9 +1,18 @@
 const Categories = require('../models/Categories')
+const Products = require('../models/Products')
 
 const getAll = async (req, res, next) => {
   try {
     const categories = await Categories.find()
-    return res.status(200).json(categories)
+
+    const categoriesWithProducts = await Promise.all(
+      categories.map(async (category) => {
+        const products = await Products.find({ category_id: category._id })
+        return { category, products }
+      })
+    )
+
+    return res.status(200).json(categoriesWithProducts)
   } catch (error) {
     console.log(error.message)
     next(error)
@@ -18,7 +27,11 @@ const getOne = async (req, res, next) => {
       return res.status(404).json({ message: 'Category not found' })
     }
 
-    return res.status(200).json(category)
+    const products = await Products.find({
+      category_id: category._id,
+    })
+
+    return res.status(200).json({ category, products })
   } catch (error) {
     console.log(error.message)
     next(error)

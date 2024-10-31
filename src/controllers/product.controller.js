@@ -2,8 +2,7 @@ const Products = require('../models/Products')
 
 const getAll = async (req, res, next) => {
   try {
-    const products = await Products.find()
-    // .populate('Category')
+    const products = await Products.find().populate('category_id')
 
     return res.status(200).json(products)
   } catch (error) {
@@ -14,8 +13,9 @@ const getAll = async (req, res, next) => {
 
 const getOne = async (req, res, next) => {
   try {
-    const product = await Products.findById(req.params.id)
-    // .populate('Category')
+    const product = await Products.findById(req.params.id).populate(
+      'category_id'
+    )
 
     if (!product) {
       return res.status(404).json({ message: 'Product not found' })

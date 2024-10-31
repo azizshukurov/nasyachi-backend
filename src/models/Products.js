@@ -9,7 +9,11 @@ const ProductSchema = new Schema(
     seller: { type: String },
     passport: { type: String },
     phone_number: { type: String },
-    category_id: { type: Schema.Types.ObjectId, ref: 'Category' },
+    category_id: {
+      type: Schema.Types.ObjectId,
+      ref: 'Category',
+      required: true,
+    },
   },
   { timestamps: true }
 )
