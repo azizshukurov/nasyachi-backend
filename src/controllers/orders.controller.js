@@ -1,0 +1,173 @@
+const Order = require('../models/Order')
+const OrderPayment = require('../models/OrderPayment')
+
+function formatNumber(num) {
+  return num.toLocaleString('de-DE')
+}
+
+const getAll = async (req, res, next) => {
+  try {
+    const orders = await Order.find()
+      .populate('product_id')
+      .populate('guarantor_id')
+      .populate('client_id')
+
+    return res.status(200).json({ success: true, data: orders })
+  } catch (error) {
+    next(error)
+  }
+}
+
+const getOne = async (req, res, next) => {
+  try {
+    const order = await Order.findById(req.params.id)
+      .populate('product_id')
+      .populate('guarantor_id')
+      .populate('client_id')
+
+    if (!order) {
+      return res
+        .status(200)
+        .json({ success: false, message: 'Buyurtma topilmadi!' })
+    }
+
+    return res.status(200).json({ success: true, data: order })
+  } catch (error) {
+    next(error)
+  }
+}
+
+const create = async (req, res, next) => {
+  try {
+    const installmentMonth = Number(req.body.installmentMonth)
+    const purchasePrice = Number(req.body.purchasePrice)
+    const sellingPrice = Number(req.body.sellingPrice)
+    const initialPaymentSumm = Number(req.body.initialPaymentSumm)
+
+    const totalAmount = sellingPrice - initialPaymentSumm
+    const monthlyPaymentSumm = totalAmount / installmentMonth
+    const profit = sellingPrice - purchasePrice
+    const profitPercentage = (profit / purchasePrice) * 100
+
+    const order = await Order.create({
+      ...req.body,
+      monthlyPaymentSumm: Math.ceil(monthlyPaymentSumm),
+      profit: profit,
+      profitPercentage: profitPercentage.toFixed(2),
+    })
+
+    return res.status(200).json({
+      success: true,
+      message: 'Successfully selling product!',
+      data: order,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+const payMonthlyOrder = async (req, res, next) => {
+  try {
+    const {
+      order_id,
+      payment_month,
+      payment_amount,
+      payment_type,
+      months_to_pay,
+    } = req.body
+
+    const order = await Order.findById(order_id)
+    if (!order) {
+      return res
+        .status(404)
+        .json({ success: false, message: 'Order not found!' })
+    }
+
+    const paymentList = await OrderPayment.find({ order_id })
+
+    // Check if payment for the current month already exists
+    const existingPayment = paymentList.find(
+      (payment) => payment.payment_month === payment_month
+    )
+    if (existingPayment) {
+      return res.status(400).json({
+        success: false,
+        message: 'Payment for this month already exists!',
+      })
+    }
+
+    const remainingMonths = order.installmentMonth - paymentList.length
+    if (remainingMonths <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No remaining installments left to pay!',
+      })
+    }
+
+    let paymentAmount
+    let residueAmount
+    let residueMonths
+
+    if (payment_type === 'monthly') {
+      // Monthly payment
+      paymentAmount = order.monthlyPaymentSumm
+      residueMonths = remainingMonths - 1
+      residueAmount = residueMonths * order.monthlyPaymentSumm
+    } else if (payment_type === 'multiple') {
+      // Pay for multiple months at once
+      const monthsToPay = months_to_pay || 1 // Default to 1 if not provided
+      if (monthsToPay > remainingMonths) {
+        return res.status(400).json({
+          success: false,
+          message: `Cannot pay for more than ${remainingMonths} remaining months.`,
+        })
+      }
+      paymentAmount = order.monthlyPaymentSumm * monthsToPay
+      residueMonths = remainingMonths - monthsToPay
+      residueAmount = residueMonths * order.monthlyPaymentSumm
+    } else if (payment_type === 'full') {
+      // Pay off the full remaining balance
+      paymentAmount = remainingMonths * order.monthlyPaymentSumm
+      residueMonths = 0
+      residueAmount = 0
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid payment type specified!',
+      })
+    }
+
+    // Create a new payment record
+    const newPayment = await OrderPayment.create({
+      order_id,
+      payment_month,
+      payment_amount: paymentAmount,
+      residue_month: residueMonths,
+      residue_amount: residueAmount,
+    })
+
+    return res.status(200).json({
+      success: true,
+      message: 'Payment successful',
+      data: { order, payment: newPayment },
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+const payAllAmountOrder = async (req, res, next) => {
+  try {
+  } catch (error) {
+    next(error)
+  }
+}
+
+module.exports = {
+  getAll,
+  getOne,
+  getOne,
+  create,
+  payMonthlyOrder,
+  payAllAmountOrder,
+}

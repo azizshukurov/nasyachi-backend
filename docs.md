@@ -2,9 +2,11 @@
 
 1. Barcha clientlarni get qilish bo'ldi lekin filter bilan get qilmayapti (qarzdor va qarzi yo'qlarni ham filter qilish kerak) va search ham qo'shish kerak
 2. dollar kursi uchun api
-3. To'lovlarni ishlab chiqish
+3. To'lov qilishni ishlab chiqish
 4. Statistikani ishlab chiqish
-5. Sotishni ishlab chiqish
+5. Sotishni ishlab chiqish (Create, get bo'ldi, to'lov qilish qoldi 1 oy uchun, istalgan summa, hammasini to'lash)
+6. Kafilni ishlab chiqish (CRUD)
+7. PDF generate to'lov qilinganda
 
 <!-- Completed -->
 
