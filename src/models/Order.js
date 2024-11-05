@@ -19,6 +19,7 @@ const OrderSchema = new Schema(
     profit: { type: Number, required: true },
     profitPercentage: { type: Number, required: true },
     file: { type: String },
+    status: { type: String, enum: [0, 1, 2], default: 1 },
   },
   { timestamps: true }
 )

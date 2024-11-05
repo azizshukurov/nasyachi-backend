@@ -56,6 +56,14 @@ const create = async (req, res, next) => {
       profitPercentage: profitPercentage.toFixed(2),
     })
 
+    await OrderPayment.create({
+      order_id: order._id,
+      payment_month: 0,
+      payment_amount: 0,
+      residue_amount: order.sellingPrice,
+      residue_month: order.installmentMonth,
+    })
+
     return res.status(200).json({
       success: true,
       message: 'Successfully selling product!',
@@ -85,7 +93,6 @@ const payMonthlyOrder = async (req, res, next) => {
 
     const paymentList = await OrderPayment.find({ order_id })
 
-    // Check if payment for the current month already exists
     const existingPayment = paymentList.find(
       (payment) => payment.payment_month === payment_month
     )
@@ -158,6 +165,48 @@ const payMonthlyOrder = async (req, res, next) => {
 
 const payAllAmountOrder = async (req, res, next) => {
   try {
+    const { order_id, payment_amount, discount_amount } = req.body
+    const total_payment_summ = payment_amount + discount_amount
+
+    const orderItem = await OrderPayment.findOne({ order_id }).populate(
+      'order_id'
+    )
+
+    if (!orderItem) {
+      return res.status(404).json({
+        success: false,
+        message: 'Buyurtma topilmadi!',
+      })
+    }
+
+    if (orderItem.order_id.status !== 1) {
+      return res.status(404).json({
+        success: false,
+        message: 'Buyurtma bekor qilingan toki tugatilgan!',
+      })
+    }
+
+    if (orderItem.residue_amount !== total_payment_summ) {
+      return res.status(404).json({
+        success: false,
+        message: "Mablag' noto'g'ri kiritilgan!",
+      })
+    }
+
+    await Order.updateOne({ _id: order_id }, { status: 2 })
+    await OrderPayment.updateOne(
+      { order_id },
+      {
+        residue_month: 0,
+        residue_amount: 0,
+        discount_amount: discount_amount || 0,
+      }
+    )
+
+    return res.status(200).json({
+      success: true,
+      message: 'Buyurtma muvaffaqiyatli yakunlandi, qarzdorlik qolmadi!',
+    })
   } catch (error) {
     next(error)
   }
