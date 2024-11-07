@@ -78,87 +78,80 @@ const create = async (req, res, next) => {
 
 const payMonthlyOrder = async (req, res, next) => {
   try {
-    const {
-      order_id,
-      payment_month,
-      payment_amount,
-      payment_type,
-      months_to_pay,
-    } = req.body
+    const { order_id, payment_amount } = req.body
 
-    const order = await Order.findById(order_id)
-    if (!order) {
-      return res
-        .status(404)
-        .json({ success: false, message: 'Order not found!' })
-    }
-
-    const paymentList = await OrderPayment.find({ order_id })
-
-    const existingPayment = paymentList.find(
-      (payment) => payment.payment_month === payment_month
+    const orderItem = await OrderPayment.findOne({ order_id }).populate(
+      'order_id'
     )
-    if (existingPayment) {
-      return res.status(400).json({
+
+    if (!orderItem) {
+      return res.status(404).json({
         success: false,
-        message: 'Payment for this month already exists!',
+        message: 'Buyurtma topilmadi!',
       })
     }
 
-    const remainingMonths = order.installmentMonth - paymentList.length
-    if (remainingMonths <= 0) {
-      return res.status(400).json({
+    if (orderItem.order_id.status === 0) {
+      return res.status(404).json({
         success: false,
-        message: 'No remaining installments left to pay!',
+        message: 'Buyurtma bekor qilingan!',
       })
     }
 
-    let paymentAmount
-    let residueAmount
-    let residueMonths
+    if (orderItem.order_id.status == 2 && orderItem.residue_amount === 0) {
+      return res.status(200).json({
+        success: true,
+        message:
+          "Buyurtma muvaffaqiyatli tugatilgan (sotilgan), qilinishi kerak bo'lgan to'lovlar qolmagan!",
+      })
+    }
 
-    if (payment_type === 'monthly') {
-      // Monthly payment
-      paymentAmount = order.monthlyPaymentSumm
-      residueMonths = remainingMonths - 1
-      residueAmount = residueMonths * order.monthlyPaymentSumm
-    } else if (payment_type === 'multiple') {
-      // Pay for multiple months at once
-      const monthsToPay = months_to_pay || 1 // Default to 1 if not provided
-      if (monthsToPay > remainingMonths) {
-        return res.status(400).json({
-          success: false,
-          message: `Cannot pay for more than ${remainingMonths} remaining months.`,
-        })
+    const newResidueAmount = orderItem.residue_amount - payment_amount
+
+    if (newResidueAmount < 0) {
+      return res.status(400).json({
+        success: false,
+        message: `To'lov miqdori ortiqcha! Maksimal qarz: ${orderItem.residue_amount}`,
+      })
+    }
+
+    await OrderPayment.updateOne(
+      { order_id },
+      {
+        $inc: { residue_amount: -payment_amount },
+        $set: {
+          residue_month:
+            orderItem.residue_amount - payment_amount <= 0
+              ? 0
+              : orderItem.residue_month - 1,
+        },
       }
-      paymentAmount = order.monthlyPaymentSumm * monthsToPay
-      residueMonths = remainingMonths - monthsToPay
-      residueAmount = residueMonths * order.monthlyPaymentSumm
-    } else if (payment_type === 'full') {
-      // Pay off the full remaining balance
-      paymentAmount = remainingMonths * order.monthlyPaymentSumm
-      residueMonths = 0
-      residueAmount = 0
-    } else {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid payment type specified!',
-      })
+    )
+
+    if (newResidueAmount === 0) {
+      await Order.updateOne({ _id: order_id }, { status: 2 })
     }
 
-    // Create a new payment record
-    const newPayment = await OrderPayment.create({
-      order_id,
-      payment_month,
-      payment_amount: paymentAmount,
-      residue_month: residueMonths,
-      residue_amount: residueAmount,
+    const orderDetails = await OrderPayment.findOne({ order_id }).populate({
+      path: 'order_id',
+      populate: [{ path: 'client_id' }, { path: 'product_id' }],
     })
+
+    const data = {
+      client_name: orderDetails.order_id.client_id.full_name,
+      product_name: orderDetails.order_id.product_id.name,
+      date: dateFormat(),
+      payment_amount,
+      residue_month: orderDetails.residue_month,
+      residue_amount: orderDetails.residue_amount,
+    }
+
+    const path = createPDF(data)
 
     return res.status(200).json({
       success: true,
-      message: 'Payment successful',
-      data: { order, payment: newPayment },
+      message: "Buyurtma to'lovlar amalga oshirildi!",
+      data: { file: path },
     })
   } catch (error) {
     next(error)

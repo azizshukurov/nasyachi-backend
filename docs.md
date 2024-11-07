@@ -1,11 +1,9 @@
 !------------------------------------------- Not completed !-------------------------------------------
 
-1. Barcha clientlarni get qilish bo'ldi lekin filter bilan get qilmayapti (qarzdor va qarzi yo'qlarni ham filter qilish kerak) va search ham qo'shish kerak
 2. dollar kursi uchun api
+5. file uploadni alohida model qilish kerak chunki ko'proq kelishi mumkin, hozir faqat bitta saqlaydi
+4. Barcha clientlarni get qilish bo'ldi lekin filter bilan get qilmayapti (qarzdor va qarzi yo'qlarni ham filter qilish kerak) va search ham qo'shish kerak
 3. Statistikani ishlab chiqish
-4. Sotishni ishlab chiqish (Create, get bo'ldi, to'lov qilish qoldi 1 oy uchun, istalgan summa, hammasini to'lash)
-5. PDF generate to'lov qilinganda
-6. file uploadni alohida model qilish kerak chunki ko'proq kelishi mumkin, hozir faqat bitta saqlaydi
 
 !------------------------------------------ Completed !-------------------------------------------------
 
@@ -16,3 +14,5 @@
 5. Mahsulotlarni ishlab chiqildi
 6. Kategory ishlab chiqildi
 7. Kafilni ishlab chiqish (CRUD)
+8. To'lov qilinganda PDF generate qilish kerak
+9. Sotish to'liq ishlab chiqildi (1 oy uchun yoki istalgan summa uchun va qarzni to'liq yopish)

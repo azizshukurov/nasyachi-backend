@@ -54,8 +54,12 @@ function createPDF(data) {
     `${data?.payment_amount}$`,
     boxY + 20 + lineHeight * 3
   )
-  addLine('Qoldiq summa', `${data?.residue_month}$`, boxY + 20 + lineHeight * 4)
-  addLine('Qoldiq oy', `${data?.residue_amount} oy`, boxY + 20 + lineHeight * 5)
+  addLine(
+    'Qoldiq summa',
+    `${data?.residue_amount}$`,
+    boxY + 20 + lineHeight * 4
+  )
+  addLine('Qoldiq oy', `${data?.residue_month} oy`, boxY + 20 + lineHeight * 5)
 
   doc.end()
 
@@ -63,14 +67,3 @@ function createPDF(data) {
 }
 
 module.exports = createPDF
-
-console.log(
-  createPDF({
-    client_name: 'John Doe',
-    product_name: 'Product XYZ',
-    date: 'November 2024',
-    payment_amount: '1000',
-    residue_month: '200',
-    residue_amount: '3',
-  })
-)
