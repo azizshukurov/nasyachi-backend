@@ -1,5 +1,7 @@
 const Order = require('../models/Order')
 const OrderPayment = require('../models/OrderPayment')
+const dateFormat = require('../utils/date-format')
+const createPDF = require('../utils/payments-check')
 
 function formatNumber(num) {
   return num.toLocaleString('de-DE')
@@ -179,17 +181,25 @@ const payAllAmountOrder = async (req, res, next) => {
       })
     }
 
-    if (orderItem.order_id.status !== 1) {
+    if (orderItem.order_id.status === 0) {
       return res.status(404).json({
         success: false,
-        message: 'Buyurtma bekor qilingan toki tugatilgan!',
+        message: 'Buyurtma bekor qilingan!',
+      })
+    }
+
+    if (orderItem.order_id.status == 2 && orderItem.residue_amount == 0) {
+      return res.status(200).json({
+        success: true,
+        message:
+          "Buyurtma muvaffaqiyatli tugatilgan (sotilgan), qilinishi kerak bo'lgan to'lovlar qolmagan!",
       })
     }
 
     if (orderItem.residue_amount !== total_payment_summ) {
       return res.status(404).json({
         success: false,
-        message: "Mablag' noto'g'ri kiritilgan!",
+        message: `Mablag' noto'g'ri kiritilgan! Qolgan qarz ${orderItem.residue_amount}`,
       })
     }
 
@@ -203,9 +213,26 @@ const payAllAmountOrder = async (req, res, next) => {
       }
     )
 
+    const orderDetails = await OrderPayment.findOne({ order_id }).populate({
+      path: 'order_id',
+      populate: [{ path: 'client_id' }, { path: 'product_id' }],
+    })
+
+    const data = {
+      client_name: orderDetails.order_id.client_id.full_name,
+      product_name: orderDetails.order_id.product_id.name,
+      date: dateFormat(),
+      payment_amount,
+      residue_month: orderDetails.residue_month,
+      residue_amount: orderDetails.residue_amount,
+    }
+
+    const path = createPDF(data)
+
     return res.status(200).json({
       success: true,
       message: 'Buyurtma muvaffaqiyatli yakunlandi, qarzdorlik qolmadi!',
+      data: { file: path },
     })
   } catch (error) {
     next(error)
